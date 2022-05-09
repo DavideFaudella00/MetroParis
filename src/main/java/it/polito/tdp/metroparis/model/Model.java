@@ -18,15 +18,15 @@ import it.polito.tdp.metroparis.db.MetroDAO;
 public class Model {
 
 	private List<Fermata> fermate;
-	Map<Integer, Fermata> fermateIdMap ;
-	
+	Map<Integer, Fermata> fermateIdMap;
+
 	private Graph<Fermata, DefaultEdge> grafo;
 
 	public List<Fermata> getFermate() {
 		if (this.fermate == null) {
 			MetroDAO dao = new MetroDAO();
 			this.fermate = dao.getAllFermate();
-			
+
 			this.fermateIdMap = new HashMap<Integer, Fermata>();
 			for (Fermata f : this.fermate)
 				this.fermateIdMap.put(f.getIdFermata(), f);
@@ -34,19 +34,13 @@ public class Model {
 		}
 		return this.fermate;
 	}
-	
-	public List<Fermata> calcolaPercorso(Fermata partenza, Fermata arrivo) {
-		creaGrafo() ;
-		visitaGrafo(partenza);
-		return null ;
-	}
 
 	public void creaGrafo() {
 		this.grafo = new SimpleDirectedGraph<Fermata, DefaultEdge>(DefaultEdge.class);
 
 //		Graphs.addAllVertices(this.grafo, this.fermate);
 		Graphs.addAllVertices(this.grafo, getFermate());
-		
+
 		MetroDAO dao = new MetroDAO();
 
 		List<CoppiaId> fermateDaCollegare = dao.getAllFermateConnesse();
@@ -59,27 +53,39 @@ public class Model {
 //		System.out.println("Archi   = " + this.grafo.edgeSet().size());
 	}
 
-	
-	
-	public void visitaGrafo(Fermata partenza) {
+	public List<Fermata> calcolaPercorso(Fermata partenza, Fermata arrivo) {
+		creaGrafo();
+		Map<Fermata, Fermata> alberoInverso = visitaGrafo(partenza);
+
+		Fermata corrente = arrivo;
+		List<Fermata> percorso = new ArrayList<>();
+
+		while (corrente != null) {
+			percorso.add(0, corrente);
+			corrente = alberoInverso.get(corrente);
+		}
+		return percorso;
+	}
+
+	public Map<Fermata, Fermata> visitaGrafo(Fermata partenza) {
 		GraphIterator<Fermata, DefaultEdge> visita = new BreadthFirstIterator<>(this.grafo, partenza);
-		
-		Map<Fermata,Fermata> alberoInverso = new HashMap<>() ;
-		alberoInverso.put(partenza, null) ;
-		
+
+		Map<Fermata, Fermata> alberoInverso = new HashMap<>();
+		alberoInverso.put(partenza, null);
+
 		visita.addTraversalListener(new RegistraAlberoDiVisita(alberoInverso, this.grafo));
 		while (visita.hasNext()) {
 			Fermata f = visita.next();
 //			System.out.println(f);
 		}
-		
-		
+
 		// Ricostruiamo il percorso a partire dall'albero inverso (pseudo-code)
 //		List<Fermata> percorso = new ArrayList<>() ;
 //		fermata = arrivo
 //		while(fermata != null)
 //			fermata = alberoInverso.get(fermata)
 //			percorso.add(fermata)
+		return alberoInverso;
 	}
 
 }
